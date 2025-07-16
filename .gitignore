@@ -1,0 +1,14 @@
+# root
+.metadata
+.settings
+.cproject
+.project
+
+# Core
+syscalls.c
+sysmem.c
+
+# Startup
+startup_stm32f446retx.s
+STM32F446RETX_RAM.ld
+STM32F446RETX_FLASH.ld
