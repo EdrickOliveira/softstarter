@@ -5,6 +5,7 @@ Drivers
 .cproject
 .mxproject
 .project
+softstarter Debug.launch
 STM32F446RETX_FLASH.ld
 STM32F446RETX_RAM.ld
 
