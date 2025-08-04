@@ -22,6 +22,6 @@ This produced:
 
 ![Pulse Overview](pulseOverview.JPG)
 
-With a pulse width of ~350us:
+With a pulse width of ~300us:
 
 ![Pulse width](pulse0.JPG)
