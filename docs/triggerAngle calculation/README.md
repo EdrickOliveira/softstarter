@@ -27,13 +27,13 @@ In the program, a function is going to be given a $P_r$ and has to output an $\a
 
 #### Rewriting
 
-$\sin(2\alpha)-2\alpha-2\pi(P_r²-1)=0$
+#### $\sin(2\alpha)-2\alpha-2\pi(P_r²-1)=0$
 
 For any given $P_r$ we define the function:
 
-$f_{(\alpha)} = \sin(2\alpha)-2\alpha+C$
+#### $f_{(\alpha)} = \sin(2\alpha)-2\alpha+C$
 
-$f'_{(\alpha)}=2\cdot\cos(2\alpha)-2$
+#### $f'_{(\alpha)}=2\cdot\cos(2\alpha)-2$
 
 ![Function of alpha](funcAlpha.gif)
 
@@ -47,15 +47,15 @@ It is a root approximation algorithm.
 
 First you take a guess $x_0$ ($x_1$ in the image above). Note that:
 
-$\frac{f_{x_0}}{x_0-x_1}=f'_{x_0}$
+### $\frac{f_{x_0}}{x_0-x_1}=f'_{x_0}$
 
 Where $x_1$ is a step closer to the root (not always the case). Thus, we calculate:
 
-$x_1=x_0-\frac{f_{x_0}}{f'_{x_0}}$
+### $x_1=x_0-\frac{f_{x_0}}{f'_{x_0}}$
 
 Then:
 
-$x_2=x_1-\frac{f_{x_1}}{f'_{x_1}}$
+### $x_2=x_1-\frac{f_{x_1}}{f'_{x_1}}$
 
 And so on, until $x_n$ is close enough to the root ($f_{x_n}\approx0$).
 
