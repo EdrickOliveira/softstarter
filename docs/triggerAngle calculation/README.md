@@ -37,7 +37,7 @@ $f'_{(\alpha)}=2\cdot\cos(2\alpha)-2$
 
 ![Function of alpha](funcAlpha.gif)
 
-We know that the $\alpha$ value we seek is the root of $f_{(\alpha)}$.
+So we know that the $\alpha$ value we seek is the root of $f_{(\alpha)}$.
 
 #### Newton-Raphson method
 
@@ -45,7 +45,19 @@ It is a root approximation algorithm.
 
 ![Newton-Raphson method](newtonRaphsonMethod.png)
 
-First you take a guess $x_0$ ($x_1$ in the image above). Note that $\frac{f_{x_0}}{x_0-x_1}=f'_{x_0}$, where $x_1$ is a step closer to the root (not always the case). Thus, we calculate $x_1=x_0-\frac{f_{x_0}}{f'_{x_0}}$, then $x_2=x_1-\frac{f_{x_1}}{f'_{x_1}}$ and so on, until $x_n$ is close enough to the root ($f_{x_n}\approx0$).
+First you take a guess $x_0$ ($x_1$ in the image above). Note that:
+
+$\frac{f_{x_0}}{x_0-x_1}=f'_{x_0}$
+
+Where $x_1$ is a step closer to the root (not always the case). Thus, we calculate:
+
+$x_1=x_0-\frac{f_{x_0}}{f'_{x_0}}$
+
+Then:
+
+$x_2=x_1-\frac{f_{x_1}}{f'_{x_1}}$
+
+And so on, until $x_n$ is close enough to the root ($f_{x_n}\approx0$).
 
 This algorithm is not perfect and its efficiency highly depends on the function and the first guess. For example, using $\frac{\pi}{100}$ ($\approx0.0314$) as $x_0$ at our $f_\alpha$ with $P_r=0.99$ results in $x_1\approx31.7$, way further from the root $\approx0.46$. Then, $x_2$ and $x_3$ are further and further, with the pattern not stopping before a lot of iterations.
 
