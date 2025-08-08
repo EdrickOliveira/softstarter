@@ -50,6 +50,16 @@ float getTrigger(float powerRatio, float guess){
     }
 }
 
+/*
+Function whose root is the trigger angle.
+The function is defined as:
+sin(2*x) - 2*x + C = 0, where C = -2*pi*(Pr^2-1)
+
+This is the equation we want to solve for x,
+where Pr is the power ratio.
+
+The function returns the value of the function at x.
+*/
 float function(float x, float Pr){
     float C;
     
@@ -58,6 +68,14 @@ float function(float x, float Pr){
     return sin(2*x) -2*x + C; //return the value of the function at x
 }
 
+
+/*
+Function's derivative, which is used in Newton's method.
+The derivative is defined as:
+f'(x) = 2*cos(2*x) - 2
+
+This is the slope of the function at x.
+*/
 float functionSlope(float x){
     return 2*cos(2*x)-2;    //return the derivative of the function at x
 }
