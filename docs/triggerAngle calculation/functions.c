@@ -4,19 +4,20 @@
 
 #define INITIAL_GUESS (M_PI/2) //guess pi/2 (half-wave) as the triggering angle. This gives the maximum first guess derivative, which helps convergence.
 
-float getTrigger(float powerRatio, float guess);
-uint16_t angleToCCR(float angle, uint16_t arr);
+float getTrigger(float powerRatio);
+float newtonMethod(float triggerAngle, float powerRatio);
 float function(float x, float Pr);
 float functionSlope(float x);
+uint16_t angleToCCR(float angle, uint16_t arr);
 
 int main(void) {
     float powerRatio = 1, triggerAngle;
     uint16_t triggerCCR;
     
-    while(powerRatio>0){
+    while(powerRatio>=0){
         scanf("%f", &powerRatio);
 
-        triggerAngle = getTrigger(powerRatio, INITIAL_GUESS);
+        triggerAngle = getTrigger(powerRatio);
         triggerCCR = angleToCCR(triggerAngle, (58100-1));
         
         printf("Power ratio = %f\nTrigger = %frad\nCCR = %i\n\n", powerRatio, triggerAngle, triggerCCR);
@@ -33,21 +34,24 @@ It can't be found with algebra (transcendental equation), so we use an iterative
 
 Original equation: sin(2*trigger)-2*trigger = 2pi(powerRatio^2-1)
 */
-float getTrigger(float powerRatio, float guess){
-    float x0, x1, derivative;
-    
-    if(powerRatio==1)   return 0; //if power ratio is 1, the trigger angle is 0
+float getTrigger(float powerRatio){
+    if (powerRatio == 1) return 0; //if power ratio is 1, the trigger angle is 0
 
-    x0 = guess;
-    derivative = functionSlope(x0); //calculate P'(x0)
-    x1 = x0-function(x0, powerRatio)/derivative; //calculate the next guess using Newton's method
+    float triggerAngle = INITIAL_GUESS;
 
-    if(fabs(function(x1, powerRatio))<0.001) { //check if this guess is close enough to the root
-        return x1; //if so, return this guess
-    }
-    else {
-        return getTrigger(powerRatio, x1); //if not, retry using x1 as the initial guess
-    }
+    do {
+        triggerAngle = newtonMethod(triggerAngle, powerRatio);
+        if (fabs(function(triggerAngle, powerRatio)) < 0.001) {
+            break;
+        }
+    } while (1);
+
+    return triggerAngle;
+}
+
+float newtonMethod(float triggerAngle, float powerRatio){
+    float derivative = functionSlope(triggerAngle);
+    return triggerAngle - function(triggerAngle, powerRatio) / derivative;
 }
 
 /*
