@@ -1,18 +1,25 @@
-#include <stdio.h>
+#include <stdio.h>  //enable printf for testing - remove at STM32 code
+#include <stdint.h> //enable uint16_t type for testing - remove at STM32 code
 #include <math.h>
 
 #define INITIAL_GUESS (M_PI/2) //guess pi/2 (half-wave) as the triggering angle. This gives the maximum first guess derivative, which helps convergence.
 
 float getTrigger(float powerRatio, float guess);
+uint16_t angleToCCR(float angle, uint16_t arr);
 float function(float x, float Pr);
 float functionSlope(float x);
 
 int main(void) {
-    float powerRatio = 1;
+    float powerRatio = 1, triggerAngle;
+    uint16_t triggerCCR;
     
     while(powerRatio>0){
         scanf("%f", &powerRatio);
-        printf("Power ratio = %f\nTrigger = %f\n\n", powerRatio, getTrigger(powerRatio, INITIAL_GUESS));
+
+        triggerAngle = getTrigger(powerRatio, INITIAL_GUESS);
+        triggerCCR = angleToCCR(triggerAngle, (58100-1));
+        
+        printf("Power ratio = %f\nTrigger = %frad\nCCR = %i\n\n", powerRatio, triggerAngle, triggerCCR);
     }
 
     return 0;
@@ -53,4 +60,23 @@ float function(float x, float Pr){
 
 float functionSlope(float x){
     return 2*cos(2*x)-2;    //return the derivative of the function at x
+}
+
+/*
+Take the trigger angle in radians and convert it to the CCR of TIM1,
+so its Output Compare Channel pulses with the desired delay (angle phase) from zeroDetector
+
+The relationship between the angle and the CCR is linear. 
+With CCR=0 the phase between the zeroDetector and the Output Compare Channel is 0 degrees.
+With CCR=ARR the pulse takes a whole period to occur (8.33ms).
+For a phase 'x' between zeroDetector and the trigger pulse, CCR/ARR has to equal x/pi
+*/
+uint16_t angleToCCR(float angle, uint16_t arr){
+    float ccr;
+    
+    ccr = angle/M_PI;
+    ccr *= arr;
+    ccr = round(ccr);
+
+    return (uint16_t)ccr;
 }
