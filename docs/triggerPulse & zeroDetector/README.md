@@ -17,7 +17,7 @@ The zeroDetector enables TIM1, which counts at 7MHz. When the couting reaches CC
 This is NOT the final version of it, but rather a test one. Our only goal was to verify that the wave would be croped the way that the triggering system wants to. The real circuit has an AC 220V power supply instead of a rectified 12V, for example.
 
 ### SSR resistor
-According to TIC216's datasheet (our triac; availiable in "Datasheets" directory), the $I_{GT}$ (Peak Gate Trigger Current) is $5mA$. Thus, for guaranteed triggering when the source is 1V (defined as the lowest triggerable voltage), a 180Ω resistor is in series with the SSR ($\frac{1V}{180Ω}\approx5.5mA$). This raises the problem of power dissipation. This is an aweful way to trigger because the resistor dissipates $1.6W$ when $V = V_{p} \approx 16V$.
+According to TIC216's datasheet (our triac; availiable in "Datasheets" directory), the $I_{GT}$ (Peak Gate Trigger Current) is $5mA$. Thus, for guaranteed triggering when the source is 1V (defined as the lowest triggerable voltage), a 180Ω resistor is in series with the SSR ($\frac{1V}{180Ω}\approx5.5mA$). This raises the problem of power dissipation. This is an awful way to trigger because the resistor dissipates $1.6W$ when $V = V_{p} \approx 16V$.
 
 ### Results
 
