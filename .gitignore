@@ -10,12 +10,18 @@ STM32F446RETX_FLASH.ld
 STM32F446RETX_RAM.ld
 
 # Core
+gpio.c
 stm32f4xx_hal_msp.c
 stm32f4xx_it.c
 syscalls.c
 sysmem.c
 system_stm32f4xx.c
+tim.c
+usart.c
+gpio.h
 main.h
 stm32f4xx_hal_conf.h
 stm32f4xx_it.h
+tim.h
+usart.h
 Startup
