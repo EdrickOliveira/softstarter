@@ -1,2 +1,12 @@
-# softstarter
-STM32 processing step of an electric engine softstarter system
+# Soft Starter - V0.1
+By Davi da Silva Schuch and Edrick Thomé de Oliveira \
+Eletrônica de Potência e Processamento de Sinais - Prof. Irineu A. Ronconi Jr.
+
+## Documentation and Progress
+- [Trigger](docs/trigger/)
+    - [Trigger Angle](docs/trigger/triggerAngle%20calculation/README.md)
+    - [Trigger Test](docs/trigger/triggerPulse%20test/README.md)
+- [Zero Detector](docs/zeroDetector/) 
+    - [Zero Detector Test](docs/zeroDetector/zeroDetector%20test/)
+    - [Zero Detector Fix](docs/zeroDetector/zeroDetector%20fix/README.md) 
+- [Trigger + Zero Detector](docs/triggerPulse%20&%20zeroDetector/README.md)
