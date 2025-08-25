@@ -340,11 +340,11 @@ static void MX_TIM3_Init(void)
   sConfig.IC1Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC1Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC1Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC1Filter = 10;
+  sConfig.IC1Filter = 5;
   sConfig.IC2Polarity = TIM_ICPOLARITY_RISING;
   sConfig.IC2Selection = TIM_ICSELECTION_DIRECTTI;
   sConfig.IC2Prescaler = TIM_ICPSC_DIV1;
-  sConfig.IC2Filter = 10;
+  sConfig.IC2Filter = 5;
   if (HAL_TIM_Encoder_Init(&htim3, &sConfig) != HAL_OK)
   {
     Error_Handler();
@@ -381,7 +381,7 @@ static void MX_TIM6_Init(void)
   htim6.Instance = TIM6;
   htim6.Init.Prescaler = 100;
   htim6.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim6.Init.Period = 840;
+  htim6.Init.Period = 800;
   htim6.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim6) != HAL_OK)
   {
@@ -473,13 +473,14 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 uint8_t MSG[50] = {'\0'};
-int angle = 0;
+int time = 5;
 int angleIncrement = 59000;
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim->Instance == TIM2){
 		if(TIM2->CCR1 == angleIncrement){
 			TIM2->CCR1 = angleIncrement + 700;
+//			if (TIM2->CCR1 > TIM2->ARR) TIM2->CCR1 = TIM2->ARR;
 		}
 		else{
 			TIM2->CCR1 = angleIncrement;
@@ -489,19 +490,18 @@ void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim){
 
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 	uint16_t counter = __HAL_TIM_GET_COUNTER(htim);
-	if (!(counter % 10)) {
-		if (__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3) && (angle + 1 <= 59 /*??*/)) angle++;
-		if (!(__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3)) && (angle - 1 >= 0)) angle--;
+	if (!(counter % 5)) {
+		if (__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3) && (time + 1 <= 50)) time++;
+		if (!(__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3)) && (time - 1 >= 5)) time--;
 
-//		angleIncrement = angle * 1000;
-		sprintf(MSG, "angle = %d \r\n", angle);
+		sprintf(MSG, "angle = %d \r\n", time);
 		HAL_UART_Transmit(&huart2, MSG, sizeof(MSG), 500);
 	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) { //1ms timer
 	if (angleIncrement > 0) {
-		angleIncrement -= (60/angle);
+		angleIncrement -= (60/time);
 	} else angleIncrement = 59000;
 }
 /* USER CODE END 4 */
