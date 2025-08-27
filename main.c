@@ -49,7 +49,7 @@ UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
 uint8_t MSG[50] = {'\0'};	//serial communication
-int time = 50;	//ramp time in seconds
+int time = 50;	          //ramp time in seconds
 float angle = ARR_8300us;	//trigger pulse angle in TIM2's pulses (not deg/rad, but rather 0 to ARR_8300us)
 
 //this struct stores the rising and falling edge angle of the trigger, as well as its state. It's an image; it's later applied to TIM2->CCR1
@@ -486,12 +486,11 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim->Instance == TIM2){
 		pulse.isHigh ^= 1;	//switch pulse image state
 		if(pulse.isHigh)	TIM2->CCR1 = pulse.falling;
-		else				TIM2->CCR1 = pulse.rising;
+		else				      TIM2->CCR1 = pulse.rising;
 	}
 }
 
