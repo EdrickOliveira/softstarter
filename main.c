@@ -31,7 +31,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define PULSE_WIDTH 700
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -48,7 +48,21 @@ TIM_HandleTypeDef htim6;
 UART_HandleTypeDef huart2;
 
 /* USER CODE BEGIN PV */
+uint8_t MSG[50] = {'\0'};	//serial communication
+int time = 50;	//ramp time in seconds
+float angle = ARR_8300us;	//trigger pulse angle in TIM2's pulses (not deg/rad, but rather 0 to ARR_8300us)
 
+//this struct stores the rising and falling edge angle of the trigger, as well as its state. It's an image; it's later applied to TIM2->CCR1
+struct pulseImage {	//struct definition
+    uint16_t rising;
+    uint16_t falling;
+    uint8_t isHigh;
+};
+struct pulseImage pulse = {	//global variable declaration and initialization in one statement
+    .rising = ARR_8300us,
+    .falling = ARR_8300us,
+    .isHigh = 0
+};
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -472,20 +486,12 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-uint8_t MSG[50] = {'\0'};
-int time = 50;
-float angleImage = ARR_8300us;
-uint16_t angle = ARR_8300us;
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim->Instance == TIM2){
-		if(TIM2->CCR1 == angle){
-			TIM2->CCR1 = angle + 700;
-			if (TIM2->CCR1 > TIM2->ARR) TIM2->CCR1 = TIM2->ARR;
-		}
-		else{
-			TIM2->CCR1 = angle;
-		}
+		pulse.isHigh ^= 1;	//switch pulse image state
+		if(pulse.isHigh)	TIM2->CCR1 = pulse.falling;
+		else				TIM2->CCR1 = pulse.rising;
 	}
 }
 
@@ -502,11 +508,13 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) { //1ms timer
 	if(htim->Instance == TIM6){
-		if (angleImage > 0) {
-			angleImage -= (ARR_8300us/(float)time)*0.001;
-		} else angleImage = TIM2->ARR;
+		if (angle > 0) {
+			angle -= (ARR_8300us/(float)time)*0.001;
+		} else angle = TIM2->ARR;
 
-		angle = (uint16_t)round(angleImage);
+		pulse.rising = (uint16_t)round(angle);
+		pulse.falling = pulse.rising + PULSE_WIDTH;
+		if(pulse.falling > ARR_8300us)	pulse.falling = ARR_8300us;	//pulse lasts up to a full cycle
 	}
 }
 /* USER CODE END 4 */
