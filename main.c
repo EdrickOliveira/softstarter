@@ -298,7 +298,7 @@ static void MX_TIM2_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
-  sConfigOC.Pulse = 10000;
+  sConfigOC.Pulse = ARR_8300us;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   if (HAL_TIM_OC_ConfigChannel(&htim2, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
@@ -473,17 +473,18 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 uint8_t MSG[50] = {'\0'};
-int time = 5;
-int angleIncrement = 59000;
+int time = 50;
+float angleImage = ARR_8300us;
+uint16_t angle = ARR_8300us;
 
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim->Instance == TIM2){
-		if(TIM2->CCR1 == angleIncrement){
-			TIM2->CCR1 = angleIncrement + 700;
-//			if (TIM2->CCR1 > TIM2->ARR) TIM2->CCR1 = TIM2->ARR;
+		if(TIM2->CCR1 == angle){
+			TIM2->CCR1 = angle + 700;
+			if (TIM2->CCR1 > TIM2->ARR) TIM2->CCR1 = TIM2->ARR;
 		}
 		else{
-			TIM2->CCR1 = angleIncrement;
+			TIM2->CCR1 = angle;
 		}
 	}
 }
@@ -494,15 +495,19 @@ void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim) {
 		if (__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3) && (time + 1 <= 50)) time++;
 		if (!(__HAL_TIM_IS_TIM_COUNTING_DOWN(&htim3)) && (time - 1 >= 5)) time--;
 
-		sprintf(MSG, "angle = %d \r\n", time);
+		sprintf(MSG, "time = %d \r\n", time);
 		HAL_UART_Transmit(&huart2, MSG, sizeof(MSG), 500);
 	}
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim) { //1ms timer
-	if (angleIncrement > 0) {
-		angleIncrement -= (60/time);
-	} else angleIncrement = 59000;
+	if(htim->Instance == TIM6){
+		if (angleImage > 0) {
+			angleImage -= (ARR_8300us/(float)time)*0.001;
+		} else angleImage = TIM2->ARR;
+
+		angle = (uint16_t)round(angleImage);
+	}
 }
 /* USER CODE END 4 */
 
