@@ -10,3 +10,4 @@ Eletrônica de Potência e Processamento de Sinais - Prof. Irineu A. Ronconi Jr.
     - [Trigger Angle](docs/trigger/triggerAngle%20calculation/README.md)
     - [Trigger Test](docs/trigger/triggerPulse%20test/README.md) 
 - [Trigger + Zero Detector](docs/triggerPulse%20&%20zeroDetector/README.md)
+- [Trigger Bridge](docs/triggerBridge/README.md)
