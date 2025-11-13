@@ -31,7 +31,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define PULSE_WIDTH 700	//pulse width in TIM1's clock pulses (ARR = 58100)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -43,7 +43,7 @@
 TIM_HandleTypeDef htim1;
 
 /* USER CODE BEGIN PV */
-
+uint32_t triggerCCR;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -51,7 +51,7 @@ void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
 static void MX_TIM1_Init(void);
 /* USER CODE BEGIN PFP */
-
+void setTriggerCCR(uint32_t newTrigger);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -90,7 +90,10 @@ int main(void)
   MX_GPIO_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
+  triggerCCR = TIM1->CCR2;	//initialize triggerCCR variable
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_2);
+
+  setTriggerCCR(35000);	//trigger happens at 108° (CCR = 35000)
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -211,7 +214,7 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
-  sConfigOC.Pulse = 35000;
+  sConfigOC.Pulse = 58100;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -289,13 +292,18 @@ static void MX_GPIO_Init(void)
 /* USER CODE BEGIN 4 */
 void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim){
 	if(htim->Instance == TIM1){
-		if(TIM1->CCR2 == 35000){
-			TIM1->CCR2 = 35000 + 700;
+		if(TIM1->CCR2 == triggerCCR){
+			TIM1->CCR2 = triggerCCR + PULSE_WIDTH;
 		}
 		else{
-			TIM1->CCR2 = 35000;
+			TIM1->CCR2 = triggerCCR;
 		}
 	}
+}
+
+void setTriggerCCR(uint32_t newTrigger){
+	TIM1->CCR2 = newTrigger;
+	triggerCCR = newTrigger;
 }
 /* USER CODE END 4 */
 
