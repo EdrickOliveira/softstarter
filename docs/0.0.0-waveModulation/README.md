@@ -1,4 +1,4 @@
-# triggerPulse & zeroDetector
+# waveModulation
 
 This repeats the triggerPulse test, but with the real zeroDetector signal instead of a simulation (done with a TIM10 PWM channel in triggerPulse).
 
