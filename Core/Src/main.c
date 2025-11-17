@@ -31,7 +31,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define PULSE_WIDTH 700	//pulse width in TIM1's clock pulses (ARR = 58100)
+#define PULSE_WIDTH 1000	//pulse width in TIM1's clock pulses (ARR = 58100)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
