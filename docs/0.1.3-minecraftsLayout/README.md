@@ -16,4 +16,4 @@ If it worked for them, it should fix the problems related in the older versions,
 
 ## Discussion
 
-The same old bouncing problem is still there. As I tested different SSRs and TRIACs (of the same model), the problem must be the model of the components itself.
+The same old bouncing problem is still there. As I tested different SSRs and TRIACs (of the same model), the problem must be the models of the components themselves.
