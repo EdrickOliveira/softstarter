@@ -93,7 +93,7 @@ int main(void)
   triggerCCR = TIM1->CCR2;	//initialize triggerCCR variable
   HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_2);
 
-  setTriggerCCR(45000);	//trigger happens at 108° (CCR = 35000)
+  setTriggerCCR(40000);	//trigger happens at 108° (CCR = 35000)
   /* USER CODE END 2 */
 
   /* Infinite loop */
