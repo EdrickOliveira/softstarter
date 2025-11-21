@@ -91,7 +91,7 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   triggerCCR = TIM1->CCR2;	//initialize triggerCCR variable
-  HAL_TIM_OC_Start_IT(&htim1, TIM_CHANNEL_2);
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 
   setTriggerCCR(40000);	//trigger happens at 108° (CCR = 35000)
   /* USER CODE END 2 */
@@ -191,7 +191,7 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_TIM_OC_Init(&htim1) != HAL_OK)
+  if (HAL_TIM_PWM_Init(&htim1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -213,14 +213,14 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_TOGGLE;
+  sConfigOC.OCMode = TIM_OCMODE_PWM2;
   sConfigOC.Pulse = 58100;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
   sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
   sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
-  if (HAL_TIM_OC_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  if (HAL_TIM_PWM_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
   {
     Error_Handler();
   }
@@ -290,17 +290,6 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
-void HAL_TIM_OC_DelayElapsedCallback(TIM_HandleTypeDef *htim){
-	if(htim->Instance == TIM1){
-		if(TIM1->CCR2 == triggerCCR){
-			TIM1->CCR2 = triggerCCR + PULSE_WIDTH;
-		}
-		else{
-			TIM1->CCR2 = triggerCCR;
-		}
-	}
-}
-
 void setTriggerCCR(uint32_t newTrigger){
 	TIM1->CCR2 = newTrigger;
 	triggerCCR = newTrigger;
