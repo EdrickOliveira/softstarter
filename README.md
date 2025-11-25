@@ -10,7 +10,7 @@ Eletrônica de Potência e Processamento de Sinais - Prof. Irineu A. Ronconi Jr.
     - [Trigger Angle](docs/trigger/triggerAngle%20calculation/README.md)
     - [Trigger Test](docs/trigger/triggerPulse%20test/README.md)
 - [0.0.0-waveModulation](docs/0.0.0-waveModulation/README.md)
-- [0.1.0-sandardControl](docs/0.1.0-standardControl/README.md)
+- [0.1.0-standardControl](docs/0.1.0-standardControl/README.md)
 - [0.1.1-inductiveLayout](docs/0.1.1-inductiveLayout/README.md)
 - [0.1.2-motorAtNeutral](docs/0.1.2-motorAtNeutral/README.md)
 - [0.1.3-minecraftsLayout](docs/0.1.3-minecraftsLayout/README.md)
