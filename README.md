@@ -1,4 +1,4 @@
-# Soft Starter - V0.1
+# Soft Starter - V0.2.3
 By Davi da Silva Schuch and Edrick Thomé de Oliveira \
 Eletrônica de Potência e Processamento de Sinais - Prof. Irineu A. Ronconi Jr.
 
