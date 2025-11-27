@@ -18,7 +18,7 @@ int main(void) {
         scanf("%f", &powerRatio);
 
         triggerAngle = getTrigger(powerRatio);
-        triggerCCR = angleToCCR(triggerAngle, (58100-1));
+        triggerCCR = angleToCCR(triggerAngle, 58100);
         
         printf("Power ratio = %f\nTrigger = %frad\nCCR = %i\n\n", powerRatio, triggerAngle, triggerCCR);
     }
@@ -57,7 +57,7 @@ float newtonMethod(float triggerAngle, float powerRatio){
 /*
 Function whose root is the trigger angle.
 The function is defined as:
-sin(2*x) - 2*x + C = 0, where C = -2*pi*(Pr^2-1)
+sin(2*x) - 2*x + C = 0. C is defined in "triggerAngle calculation"
 
 This is the equation we want to solve for x,
 where Pr is the power ratio.
@@ -65,11 +65,17 @@ where Pr is the power ratio.
 The function returns the value of the function at x.
 */
 float function(float x, float Pr){
-    float C;
-    
-    C = -2*M_PI*(pow(Pr, 2)-1);
+    double C, Up;
 
-    return sin(2*x) -2*x + C; //return the value of the function at x
+    Up = sqrt(2)*220;
+
+    C = pow(220, 2)*36*M_PI*pow(Pr, 2);
+    C -= 22*M_PI*pow(Up, 2);
+    C += pow(Up, 2)*sin(4*M_PI/9);
+    C /= 9*pow(Up, 2);
+    C *= -1;
+
+    return (float)(sin(2*x) -2*x + C); //return the value of the function at x
 }
 
 

@@ -14,7 +14,7 @@ The PPM being used now looks like this:
 
 ![alt text](PPM.png)
 
-It works just fine when α>β. However, if this condition is not true, the problem described in the first paragraph takes place. Intuitively, if the trigger were to happen inside the extension (α<β), it could be enlarged up to when it effectively triggered the TRIAC.
+It works just fine when $\alpha>\beta$. However, if this condition is not true, the problem described in the first paragraph takes place. Intuitively, if the trigger were to happen inside the extension ($\alpha<\beta$), it could be enlarged up to when it effectively triggered the TRIAC.
 
 Instead of calculating or measuring the necessary lenght of the trigger pulse for that, why not just make it last up to the next cycle? We initially thought that'd make the gate resistor dissipate too much power, but then realized that while the TRIAC if on, the voltage between MT1 and MT2 is roughly zero, and so is the voltage between Gate-MT1.
 
@@ -22,7 +22,7 @@ Therefore, the following can be done:
 
 ![alt text](pwm.png)
 
-As explained, in this layout, the gate-resistor voltage is just a spike at the rising edges of the trigger signal (blue). When α>β, the TRIAC activation will work just fine. When α<β, the spike only happens after the extension is over, and the voltage would be about to drop to zero again. This triggers the TRIAC right on time in a way that the whole sine wave in transferred to the motor.
+As explained, in this layout, the gate-resistor voltage is just a spike at the rising edges of the trigger signal (blue). When $\alpha>\beta$, the TRIAC activation will work just fine. When $\alpha<\beta$, the spike only happens after the extension is over, and the voltage would be about to drop to zero again. This triggers the TRIAC right on time in a way that the whole sine wave in transferred to the motor.
 
 ## Results
 
@@ -38,8 +38,8 @@ _PS: trigger ≃ 124°_
 
 ## Discussion
 
-The usage of PWM trigger instead of PPM did not cause any misbehavior. With ~124° trigger, the β angle was ~41°. Measurement below:
+The usage of PWM trigger instead of PPM did not cause any misbehavior. With ~124° trigger, the $\beta$ angle was ~41°. Measurement below:
 
 ![alt text](beta.JPG)
 
-Keeping in mind that the extension happens due to the motor's inductance, it is presumable that the greater the current flowing through it, the longer it'll take for it to vanish, increasing β. As the current depends of the average voltage, which is a function of α, we know that β is not constant, but a function of α.
+Keeping in mind that the extension happens due to the motor's inductance, it is presumable that the greater the current flowing through it, the longer it'll take for it to vanish, increasing $\beta$. As the current depends of the average voltage, which is a function of $\alpha$, we know that $\beta$ is not constant, but a function of $\alpha$.

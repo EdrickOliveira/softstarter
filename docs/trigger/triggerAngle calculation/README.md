@@ -63,8 +63,62 @@ This algorithm is not perfect and its efficiency highly depends on the function 
 
 In our case, a first guess with the highest absolute value of the derivative should converge quicker. The peak in $f'_{(\alpha)}=2\cdot\cos(2\alpha)-2 | \alpha\in[0; \pi]$ is at $\alpha=\frac{\pi}{2}$, so this will always be the first guess.
 
-#### Code
+The next step will be to implement this in the STM32 code.
 
-The file "functions.c" is a working demonstration of this. It takes an user input as Power Ratio and calculates an approximate trigger angle ($\alpha$) value according to the $2\pi(P_r²-1)=\sin(2\alpha)-2\alpha$ equation.
+# Considering $\beta$
 
-The next step will be implement this in the STM32 code.
+As the load is inductive, the voltage between it doesn't actually stop at zero as shown in the first image, but extends a bit to the other side of the x-axis for a while. We called this an "extension" and measure it as an angle $\beta$.
+
+![Inductive Load Wave](inductiveLoadWave.png)
+
+This results in a real Power Ratio ($P_r$) of more than the one that was just calculated considering a resistive load. To calculate $\alpha$ so that the real $P_r$ is transfered to the load, we have to start by the $U_{RMS}$ of the wave.
+
+Instead of using the equation discussed in the beginning of this document, we must consider that the wave doesn't start at $0$ and stops at $\pi$. The equation follows:
+
+### $U_{RMS(\alpha)}=\sqrt{\frac{1}{T}\cdot(\int_{\alpha}^{\pi+\beta} U_P^2\cdot\sin^2\theta \,d\theta+\int_{\pi+\alpha}^{2\pi+\beta} U_P^2\cdot\sin^2\theta \,d\theta)}$
+
+Being a semicycle $\pi rad$ long, the first integral calculates the area between the x-axis and the square of the function while it is effective, which is between $\alpha$ and $\pi+\beta$. The second integral does the same, but with the other semicycle. The sum of both integrals is the area between the x-axis and the square of the sine function. Deviding this area by the period of time elapsed between both functions (one semicycle each; including the moments the wave is cut), which is $2\pi$, results in the overall average voltage, not of the wave, but of its square. Then the square root of this area is taken, resulting in the $RMS$ voltage of the cropped wave, taking $\beta$ into consideration, as a function of $\alpha$.
+
+We know that the function bewteen $\pi+\alpha$ and $2\pi+\beta$ is symetrical to the one between $\alpha$ and $\pi+\beta$. Therefore their squares are equal to each other. The equation shrinks to:
+
+### $U_{RMS(\alpha)}=\sqrt{\frac{1}{2\pi}\cdot(2\cdot\int_{\alpha}^{\pi+\beta} U_P^2\cdot\sin^2\theta \,d\theta)}$
+
+### $U_{RMS(\alpha)}=\sqrt{\frac{1}{\pi}\cdot\int_{\alpha}^{\pi+\beta} U_P^2\cdot\sin^2\theta \,d\theta}$
+
+After calculating the integral:
+
+### $U_{RMS(\alpha)}=\frac{1}{\sqrt\pi}\cdot U_P\cdot\sqrt{\frac{\pi+\beta-\alpha}{2}+\frac{\sin(2\alpha)-\sin(2\pi+2\beta)}{4}}$
+
+Simplifying:
+
+### $U_{RMS(\alpha)}=\frac{U_P}{\sqrt2}\cdot\sqrt{\frac{\pi+\beta-\alpha}{\pi}+\frac{\sin(2\alpha)-\sin(2\beta)}{2\pi}}$
+
+As $\beta$ happens because of the current inducted by the motor, this means that the greater the current, the longer the extension must be. This current is a function of $U_{RMS}$, which is a funciton of $\alpha$. We conclude that $\beta$ is a function of $\alpha$.
+
+After talking to professor João Neves again, we found out that there is an equation $\beta=f_{(\alpha)}$. However, the internal resistance of the motor, its inductance (which varies according to the RPM) and another variable $\phi$ (related to the conduction time, which itself is related to $\beta$) were components of the equation. We decided it would be more viable to just measure multiple $\alpha$ $\beta$ pairs and extract a function from that.
+
+The measurements follow ($x$ is $\alpha$; $y$ is $\beta$)
+
+![Alpha-Beta Data](alphaBetaData.png)
+
+At $\alpha=138.9°$ the motor was moving in spikes. It was barely spinning. We can consider $140°$ as the maximum $\alpha$ (minimum $P_r$) so that the motor works. Similarly, at $\alpha=46.29°$, the ending of the extension starts to merge with the next trigger. Therefore, we are also going to consider $45°$ as the minimum $\alpha$ of maximum $P_r$.
+
+Inside this range, $\beta$ doesn't really change much. It is reasonable, according to the data table, to just consider $\beta$ as a constant. $40°$ should be good.
+
+Applying $\beta=40°$ to the $U_{RMS(\alpha)}$ equation:
+
+### $U_{RMS(\alpha)}=\frac{U_P}{\sqrt2}\cdot\sqrt{\frac{\frac{11\pi}{9}-\alpha}{\pi}+\frac{\sin(2\alpha)-\sin(\frac{4\pi}{9})}{2\pi}}$
+
+### $P_r=\frac{U_{RMS(\alpha)}}{220}=\frac{\frac{U_P}{\sqrt2}\cdot\sqrt{\frac{\frac{11\pi}{9}-\alpha}{\pi}+\frac{\sin(2\alpha)-\sin(\frac{4\pi}{9})}{2\pi}}}{220}$
+
+### $\sin(2\alpha)-2\alpha=\frac{220^2\cdot36\pi\cdot P_r^2-22\pi\cdot U_P^2+U_P^2\cdot\sin(\frac{4\pi}{9})}{9U_P^2}$
+
+From this point, the solution is exactly the same as previously, in topic [Finding $\alpha$](#finding), with the only difference being the calculation of $C$:
+
+### $C=-\frac{220^2\cdot36\pi\cdot P_r^2-22\pi\cdot U_P^2+U_P^2\cdot\sin(\frac{4\pi}{9})}{9U_P^2}$
+
+# Code
+
+The file "functions.c" is a working demonstration of this. It takes an user input as Power Ratio and calculates an approximate trigger angle ($\alpha$) value according to the equation:
+
+#### $\sin(2\alpha)-2\alpha=\frac{220^2\cdot36\pi\cdot P_r^2-22\pi\cdot U_P^2+U_P^2\cdot\sin(\frac{4\pi}{9})}{9U_P^2}$
