@@ -67,19 +67,19 @@ The next step will be to implement this in the STM32 code.
 
 # Considering $\beta$
 
-As the load is inductive, the voltage between it doesn't actually stop at zero as shown in the first image, but extends a bit to the other side of the x-axis for a while. We called this an "extension" and measure it as an angle $\beta$.
+As the load is inductive, the voltage across it doesn't actually stop at zero as shown in the first image, but extends a bit to the other side of the x-axis for a while. We called this "extension" and measure it as an angle $\beta$.
 
 ![Inductive Load Wave](inductiveLoadWave.png)
 
-This results in a real Power Ratio ($P_r$) of more than the one that was just calculated considering a resistive load. To calculate $\alpha$ so that the real $P_r$ is transfered to the load, we have to start by the $U_{RMS}$ of the wave.
+This results in a real Power Ratio ($P_r$) of more than the one that was just calculated considering a resistive load. To calculate $\alpha$ so that the real $P_r$ is transferred to the load, we have to start by the $U_{RMS}$ of the voltage wave.
 
 Instead of using the equation discussed in the beginning of this document, we must consider that the wave doesn't start at $0$ and stops at $\pi$. The equation follows:
 
 ### $U_{RMS(\alpha)}=\sqrt{\frac{1}{T}\cdot(\int_{\alpha}^{\pi+\beta} U_P^2\cdot\sin^2\theta \,d\theta+\int_{\pi+\alpha}^{2\pi+\beta} U_P^2\cdot\sin^2\theta \,d\theta)}$
 
-Being a semicycle $\pi rad$ long, the first integral calculates the area between the x-axis and the square of the function while it is effective, which is between $\alpha$ and $\pi+\beta$. The second integral does the same, but with the other semicycle. The sum of both integrals is the area between the x-axis and the square of the sine function. Deviding this area by the period of time elapsed between both functions (one semicycle each; including the moments the wave is cut), which is $2\pi$, results in the overall average voltage, not of the wave, but of its square. Then the square root of this area is taken, resulting in the $RMS$ voltage of the cropped wave, taking $\beta$ into consideration, as a function of $\alpha$.
+Since it is a semicycle $\pi rad$ long, the first integral calculates the area between the x-axis and the square of the function while it is effective, which is between $\alpha$ and $\pi+\beta$. The second integral does the same, but with the other semicycle. The sum of both integrals is the area between the x-axis and the square of the sine function. Dividing this area by the period of time elapsed for both functions (one semicycle each; including the moments the wave is cut), which is $2\pi$, results in the overall average voltage, not of the wave, but of its square value. Then the square root of this area is taken, resulting in the $RMS$ voltage of the cropped wave, taking $\beta$ into consideration, as a function of $\alpha$.
 
-We know that the function bewteen $\pi+\alpha$ and $2\pi+\beta$ is symetrical to the one between $\alpha$ and $\pi+\beta$. Therefore their squares are equal to each other. The equation shrinks to:
+We know that the function between $\pi+\alpha$ and $2\pi+\beta$ is symmetrical to the one between $\alpha$ and $\pi+\beta$. Therefore their squares are equal to each other. The equation simplifies to:
 
 ### $U_{RMS(\alpha)}=\sqrt{\frac{1}{2\pi}\cdot(2\cdot\int_{\alpha}^{\pi+\beta} U_P^2\cdot\sin^2\theta \,d\theta)}$
 
@@ -93,7 +93,7 @@ Simplifying:
 
 ### $U_{RMS(\alpha)}=\frac{U_P}{\sqrt2}\cdot\sqrt{\frac{\pi+\beta-\alpha}{\pi}+\frac{\sin(2\alpha)-\sin(2\beta)}{2\pi}}$
 
-As $\beta$ happens because of the current inducted by the motor, this means that the greater the current, the longer the extension must be. This current is a function of $U_{RMS}$, which is a funciton of $\alpha$. We conclude that $\beta$ is a function of $\alpha$.
+As $\beta$ happens because of the current induced by the motor, this means that the greater the current, the longer the extension must be. This current is a function of $U_{RMS}$, which is a function of $\alpha$. We conclude that $\beta$ is a function of $\alpha$.
 
 After talking to professor João Neves again, we found out that there is an equation $\beta=f_{(\alpha)}$. However, the internal resistance of the motor, its inductance (which varies according to the RPM) and another variable $\phi$ (related to the conduction time, which itself is related to $\beta$) were components of the equation. We decided it would be more viable to just measure multiple $\alpha$ $\beta$ pairs and extract a function from that.
 
@@ -101,7 +101,7 @@ The measurements follow ($x$ is $\alpha$; $y$ is $\beta$)
 
 ![Alpha-Beta Data](alphaBetaData.png)
 
-At $\alpha=138.9°$ the motor was moving in spikes. It was barely spinning. We can consider $140°$ as the maximum $\alpha$ (minimum $P_r$) so that the motor works. Similarly, at $\alpha=46.29°$, the ending of the extension starts to merge with the next trigger. Therefore, we are also going to consider $45°$ as the minimum $\alpha$ of maximum $P_r$.
+At $\alpha=138.9°$ the motor was moving in spikes. It was barely spinning. We can consider $140°$ as the maximum $\alpha$ (minimum $P_r$) so that the motor works. Similarly, at $\alpha=46.29°$, the ending of the extension starts to merge with the start of the next cycle's trigger. Therefore, we are also going to consider $45°$ as the minimum $\alpha$ for maximum $P_r$.
 
 Inside this range, $\beta$ doesn't really change much. It is reasonable, according to the data table, to just consider $\beta$ as a constant. $40°$ should be good.
 
@@ -119,6 +119,6 @@ From this point, the solution is exactly the same as previously, in topic [Findi
 
 # Code
 
-The file "functions.c" is a working demonstration of this. It takes an user input as Power Ratio and calculates an approximate trigger angle ($\alpha$) value according to the equation:
+The file "functions.c" is a working implementation of this. It takes a user input as Power Ratio and calculates an approximate trigger angle ($\alpha$) value according to the equation:
 
 #### $\sin(2\alpha)-2\alpha=\frac{220^2\cdot36\pi\cdot P_r^2-22\pi\cdot U_P^2+U_P^2\cdot\sin(\frac{4\pi}{9})}{9U_P^2}$
