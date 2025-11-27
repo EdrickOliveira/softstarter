@@ -43,3 +43,7 @@ The usage of PWM trigger instead of PPM did not cause any misbehavior. With ~124
 ![alt text](beta.JPG)
 
 Keeping in mind that the extension happens due to the motor's inductance, it is presumable that the greater the current flowing through it, the longer it'll take for it to vanish, increasing $\beta$. As the current depends of the average voltage, which is a function of $\alpha$, we know that $\beta$ is not constant, but a function of $\alpha$.
+
+Instead of trying to solve the extension, the calculation of $\alpha$ for a desired $Power Ratio$ takes $\beta$ into account. This way, considering that the calculation perfectly matches reality, there is no downside at all derived from the extension.
+
+Details of these calculations are found in "triggerAngle calculation".
