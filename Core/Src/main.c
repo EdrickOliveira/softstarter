@@ -37,7 +37,7 @@ typedef struct{
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define PULSE_WIDTH 1000	//pulse width in TIM1's clock pulses (ARR = 58100)
-#define ARR 58100
+#define TRIGGER_ARR 58100
 #define RX_BUFFER_SIZE 4
 /* USER CODE END PD */
 
@@ -48,12 +48,14 @@ typedef struct{
 
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim10;
 
 UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_rx;
 
 /* USER CODE BEGIN PV */
 ramps_t ramps;
+uint32_t time_ms = 0;		//stopwatch
 
 uint32_t triggerCCR;
 
@@ -69,6 +71,7 @@ static void MX_GPIO_Init(void);
 static void MX_DMA_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_USART2_UART_Init(void);
+static void MX_TIM10_Init(void);
 /* USER CODE BEGIN PFP */
 void menu();
 void setPr();
@@ -125,9 +128,10 @@ int main(void)
   MX_DMA_Init();
   MX_TIM1_Init();
   MX_USART2_UART_Init();
+  MX_TIM10_Init();
   /* USER CODE BEGIN 2 */
   triggerCCR = TIM1->CCR2;	//initialize triggerCCR variable
-  setTriggerCCR(ARR);
+  setTriggerCCR(TRIGGER_ARR);
 
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);	//start trigger PWM
 
@@ -285,6 +289,37 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief TIM10 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM10_Init(void)
+{
+
+  /* USER CODE BEGIN TIM10_Init 0 */
+
+  /* USER CODE END TIM10_Init 0 */
+
+  /* USER CODE BEGIN TIM10_Init 1 */
+
+  /* USER CODE END TIM10_Init 1 */
+  htim10.Instance = TIM10;
+  htim10.Init.Prescaler = (84-1);
+  htim10.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim10.Init.Period = (1000-1);
+  htim10.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim10.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim10) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM10_Init 2 */
+
+  /* USER CODE END TIM10_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -403,14 +438,54 @@ void setPr(){
 	Sr = (float)extractNumber()/100;
 	Pr = speedToPower(Sr);
 	triggerAngle = getTrigger(Pr);
-	triggerCCR = (uint16_t)angleToCCR(triggerAngle, ARR);
+	triggerCCR = (uint16_t)angleToCCR(triggerAngle, TRIGGER_ARR);
 	setTriggerCCR(triggerCCR);
 }
 
 void startRamp(){
-	uint8_t message[] = {"\r\n\nFunction in development"};
+	uint8_t risingMsg[] = {"\r\n\nRising ramp started"};
+	uint8_t fullPowerMsg[] = {"\r\nFull power\r\nType 'enter' to start falling ramp"};
+	uint8_t fallingMsg[] = {"\r\nFalling ramp started"};
+	uint8_t offMsg[] = {"\r\nMotor is off"};
+	float Pr, Sr, triggerAngle, time_s;
+	uint16_t triggerCCR;
 
-	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);
+	HAL_UART_Transmit(&huart2, risingMsg, len(risingMsg), HAL_MAX_DELAY);	//print that rising has begun
+
+	//rising ramp
+	HAL_TIM_Base_Start_IT(&htim10);	//start stopwatch
+	do{
+		//constantly update trigger angle according to the stopwatch
+		time_s = ((float)(time_ms))/1000;
+		Sr = ((float)time_s)/ramps.risingTime;	//percentage of time elapsed (100% is the rising time) is the SpeedRatio
+		Pr = speedToPower(Sr);
+		triggerAngle = getTrigger(Pr);
+		triggerCCR = (uint16_t)angleToCCR(triggerAngle, TRIGGER_ARR);
+		setTriggerCCR(triggerCCR);
+	}while(time_s<ramps.risingTime);	//stop when rising time is complete
+	time_ms = 0;
+	HAL_TIM_Base_Stop_IT(&htim10);
+
+	HAL_UART_Transmit(&huart2, fullPowerMsg, len(fullPowerMsg), HAL_MAX_DELAY);	//print full power indicator
+	receiveInput(1);	//wait for any user input
+
+	HAL_UART_Transmit(&huart2, fallingMsg, len(fallingMsg), HAL_MAX_DELAY);	//print that falling has begun
+
+	//falling ramp
+	HAL_TIM_Base_Start_IT(&htim10);	//start stopwatch
+	do{
+		//constantly update trigger angle according to the stopwatch
+		time_s = ((float)(time_ms))/1000;
+		Sr = ((float)(ramps.fallingTime-time_s))/ramps.fallingTime;	//percentage of time remaining to falling time is the SpeedRatio
+		Pr = speedToPower(Sr);
+		triggerAngle = getTrigger(Pr);
+		triggerCCR = (uint16_t)angleToCCR(triggerAngle, TRIGGER_ARR);
+		setTriggerCCR(triggerCCR);
+	}while(time_s<ramps.fallingTime);
+	time_ms = 0;
+	HAL_TIM_Base_Stop_IT(&htim10);
+
+	HAL_UART_Transmit(&huart2, offMsg, len(offMsg), HAL_MAX_DELAY);	//print that motor is off
 }
 
 void rampSettings(){
@@ -545,6 +620,12 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 
 	//flip flag when input has been completely received
 	if(isInputComplete())	rxFlag++;
+}
+
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if (htim->Instance == TIM10){
+		time_ms++;	//increment stopwatch by 1 milisecond
+	}
 }
 /* USER CODE END 4 */
 

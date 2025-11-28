@@ -17,9 +17,9 @@ Sr is linear when related to Pr.
 float speedToPower(float Sr){
 	float Pr;
 
-	//turn engine on or off if desired Speed Ratio is one or zero, respectively
-	if(Sr>=1)	return 1;
-	if(Sr<=0)	return 0;
+	//turn engine on or off if desired Speed Ratio is one or zero, respectively (not == 1 because floats are tricky)
+	if(Sr>0.99)	return 1;
+	if(Sr<0.01)	return 0;
 
 	Pr = a*Sr+b;
 
