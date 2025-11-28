@@ -27,7 +27,11 @@
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-
+typedef struct{
+	//rising and falling times in seconds
+	int risingTime;
+	int fallingTime;
+}ramps_t;
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -49,6 +53,8 @@ UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_rx;
 
 /* USER CODE BEGIN PV */
+ramps_t ramps;
+
 uint32_t triggerCCR;
 
 uint8_t rx;				//byte received from UART
@@ -68,13 +74,16 @@ void menu();
 void setPr();
 void startRamp();
 void rampSettings();
+void setRampTime(int *rampTime);
 
 void setTriggerCCR(uint32_t newTrigger);
 
 void clearRxBuffer();
 void appendRxBuffer(uint8_t data);
+void backspaceRxBuffer();
 char isInputComplete();
 int extractNumber();	//convert the byte sequence buffer (number written in ASCII) to integer
+void receiveInput(int size);
 
 int len(uint8_t *s);	//returns the length of a string
 /* USER CODE END PFP */
@@ -365,15 +374,10 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 void menu(){
-	uint8_t message[] = {"\r\n\nCommands:\n\r\t'P': set power ratio\n\r\t'S': start ramp\n\r\t'R': ramp settings\n\rType the command: \0"};
+	uint8_t message[] = {"\r\n\nCommands:\n\r\t'P': set power ratio\n\r\t'S': start ramp\n\r\t'R': ramp settings\n\rType the command: "};
 
 	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);	//print menu and prompt
-	clearRxBuffer();
-	inputSize = 1;	//1 byte long input expected
-
-	//wait for an input
-	while(!rxFlag);
-	rxFlag = 0;
+	receiveInput(1);	//1 byte long input expected
 
 	switch(rxBuffer[0]){
 	case 'p':
@@ -389,17 +393,12 @@ void menu(){
 }
 
 void setPr(){
-	uint8_t message[] = {"\r\n\nInsert desired Power Ratio (in percentage): \0"};
+	uint8_t message[] = {"\r\n\nInsert desired Power Ratio (in percentage): "};
 	float Pr, Sr, triggerAngle;
 	uint16_t triggerCCR;
 
 	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);	//print prompt
-	clearRxBuffer();
-	inputSize = 3;
-
-	//wait for an input
-	while(!rxFlag);
-	rxFlag = 0;
+	receiveInput(3);	//3 bytes long input expected
 
 	Sr = (float)extractNumber()/100;
 	Pr = speedToPower(Sr);
@@ -409,15 +408,34 @@ void setPr(){
 }
 
 void startRamp(){
-	uint8_t message[] = {"\r\n\nFunction in development\0"};
+	uint8_t message[] = {"\r\n\nFunction in development"};
 
 	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);
 }
 
 void rampSettings(){
-	uint8_t message[] = {"\r\n\nFunction in development\0"};
+	uint8_t message[] = {"\r\n\nRising ramp ('R')\n\rFalling ramp ('F')\n\rSelect an option: "};
 
 	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);
+	receiveInput(1);	//1 byte long input expected
+
+	switch(rxBuffer[0]){
+	case 'r':
+		setRampTime(&(ramps.risingTime));
+		break;
+	case 'f':
+		setRampTime(&(ramps.fallingTime));
+		break;
+	}
+}
+
+void setRampTime(int *rampTime){
+	uint8_t message[] = {"\r\nInsert ramp time in seconds (max 3 digits): "};
+
+	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);
+	receiveInput(3);	//3 bytes long input expected
+
+	*rampTime = extractNumber();
 }
 
 void setTriggerCCR(uint32_t newTrigger){
@@ -440,6 +458,24 @@ void appendRxBuffer(uint8_t data){
 	}
 
 	rxBuffer[i] = rx;
+}
+
+void backspaceRxBuffer(){
+	uint8_t skipLine[] = {"\r\n"};
+
+	int i;
+
+	for(i=RX_BUFFER_SIZE; rxBuffer[i]=='\0'; i--);	//run from end to front in the buffer up to the last character
+
+	rxBuffer[i] = '\0';	//delete the last character in buffer
+
+	//print rxBuffer in next line
+	HAL_UART_Transmit(&huart2, skipLine, len(skipLine), HAL_MAX_DELAY);
+	i = 0;
+	while(rxBuffer[i]!='\0'){
+		HAL_UART_Transmit(&huart2, &rxBuffer[i], 1, HAL_MAX_DELAY);
+		i++;
+	}
 }
 
 char isInputComplete(){
@@ -469,6 +505,15 @@ int extractNumber(){
 	return num;
 }
 
+void receiveInput(int size){
+	clearRxBuffer();
+	inputSize = size;	//'size' byte long input expected
+
+	//wait for an input
+	while(!rxFlag);
+	rxFlag = 0;
+}
+
 int len(uint8_t *s){
 	int size = 0;
 
@@ -481,7 +526,14 @@ int len(uint8_t *s){
 }
 
 void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
-	HAL_UART_Transmit(huart, &rx, 1, HAL_MAX_DELAY);	//echo
+	if(rx!='\177'){
+		HAL_UART_Transmit(huart, &rx, 1, HAL_MAX_DELAY);	//echo if key typed was not backspace/del
+	}
+	//allow user to delete last character, if they typed backspace/del
+	else{
+		backspaceRxBuffer();
+		return;
+	}
 
 	//flip flag if user typed 'enter'
 	if(rx=='\r'){
