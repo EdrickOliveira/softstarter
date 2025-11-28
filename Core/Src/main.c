@@ -21,7 +21,8 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "math.h"
+#include "powerToAngle.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -32,6 +33,8 @@
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
 #define PULSE_WIDTH 1000	//pulse width in TIM1's clock pulses (ARR = 58100)
+#define ARR 58100
+#define RX_BUFFER_SIZE 4
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -42,16 +45,38 @@
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
 
+UART_HandleTypeDef huart2;
+DMA_HandleTypeDef hdma_usart2_rx;
+
 /* USER CODE BEGIN PV */
 uint32_t triggerCCR;
+
+uint8_t rx;				//byte received from UART
+uint8_t rxBuffer[RX_BUFFER_SIZE];	//stores data received from UART
+uint8_t rxFlag = 0;		//flips to 1 when DMA request is complete (a message has been received)
+uint8_t inputSize;	//the size of the next expected input
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
+static void MX_DMA_Init(void);
 static void MX_TIM1_Init(void);
+static void MX_USART2_UART_Init(void);
 /* USER CODE BEGIN PFP */
+void menu();
+void setPr();
+void startRamp();
+void rampSettings();
+
 void setTriggerCCR(uint32_t newTrigger);
+
+void clearRxBuffer();
+void appendRxBuffer(uint8_t data);
+char isInputComplete();
+int extractNumber();	//convert the byte sequence buffer (number written in ASCII) to integer
+
+int len(uint8_t *s);	//returns the length of a string
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
@@ -88,12 +113,20 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
+  MX_DMA_Init();
   MX_TIM1_Init();
+  MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   triggerCCR = TIM1->CCR2;	//initialize triggerCCR variable
+  setTriggerCCR(35000);
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 
-  setTriggerCCR(12000);	//trigger happens at 108° (CCR = 35000)
+  //clear buffer and start listening to UART
+  clearRxBuffer();
+  HAL_UART_Receive_DMA(&huart2, &rx, 1);
+
+  menu();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -243,6 +276,55 @@ static void MX_TIM1_Init(void)
 }
 
 /**
+  * @brief USART2 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_USART2_UART_Init(void)
+{
+
+  /* USER CODE BEGIN USART2_Init 0 */
+
+  /* USER CODE END USART2_Init 0 */
+
+  /* USER CODE BEGIN USART2_Init 1 */
+
+  /* USER CODE END USART2_Init 1 */
+  huart2.Instance = USART2;
+  huart2.Init.BaudRate = 115200;
+  huart2.Init.WordLength = UART_WORDLENGTH_8B;
+  huart2.Init.StopBits = UART_STOPBITS_1;
+  huart2.Init.Parity = UART_PARITY_NONE;
+  huart2.Init.Mode = UART_MODE_TX_RX;
+  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
+  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
+  if (HAL_UART_Init(&huart2) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN USART2_Init 2 */
+
+  /* USER CODE END USART2_Init 2 */
+
+}
+
+/**
+  * Enable DMA controller clock
+  */
+static void MX_DMA_Init(void)
+{
+
+  /* DMA controller clock enable */
+  __HAL_RCC_DMA1_CLK_ENABLE();
+
+  /* DMA interrupt init */
+  /* DMA1_Stream5_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+
+}
+
+/**
   * @brief GPIO Initialization Function
   * @param None
   * @retval None
@@ -269,14 +351,6 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pins : USART_TX_Pin USART_RX_Pin */
-  GPIO_InitStruct.Pin = USART_TX_Pin|USART_RX_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-  GPIO_InitStruct.Alternate = GPIO_AF7_USART2;
-  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
-
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -290,9 +364,136 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void menu(){
+	uint8_t message[] = {"\r\n\nCommands:\n\r\t'P': set power ratio\n\r\t'S': start ramp\n\r\t'R': ramp settings\n\rType the command: \0"};
+
+	setTriggerCCR(ARR);	//turn motor off
+
+	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);	//print menu and prompt
+	clearRxBuffer();
+	inputSize = 1;	//1 byte long input expected
+
+	//wait for an input
+	while(!rxFlag);
+	rxFlag = 0;
+
+	switch(rxBuffer[0]){
+	case 'p':
+		setPr();
+		break;
+	case 's':
+		startRamp();
+		break;
+	case 'r':
+		rampSettings();
+		break;
+	}
+}
+
+void setPr(){
+	uint8_t message[] = {"\r\n\nInsert desired Power Ratio (in percentage): \0"};
+	float Pr, triggerAngle;
+	uint16_t triggerCCR;
+
+	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);	//print prompt
+	clearRxBuffer();
+	inputSize = 3;
+
+	//wait for an input
+	while(!rxFlag);
+	rxFlag = 0;
+
+	Pr = (float)extractNumber()/100;
+	triggerAngle = getTrigger(Pr);
+	triggerCCR = (uint16_t)angleToCCR(triggerAngle, ARR);
+	setTriggerCCR(triggerCCR);
+}
+
+void startRamp(){
+	uint8_t message[] = {"\r\n\nFunction in development\0"};
+
+	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);
+}
+
+void rampSettings(){
+	uint8_t message[] = {"\r\n\nFunction in development\0"};
+
+	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);
+}
+
 void setTriggerCCR(uint32_t newTrigger){
 	TIM1->CCR2 = newTrigger;
 	triggerCCR = newTrigger;
+}
+
+void clearRxBuffer(){
+	for(int i=0; i<RX_BUFFER_SIZE; i++){
+		rxBuffer[i] = '\0';
+	}
+}
+
+void appendRxBuffer(uint8_t data){
+	int i=0;
+
+	while(rxBuffer[i]!='\0'){
+		i++;
+		if(i==RX_BUFFER_SIZE)	return;	//do nothing if buffer is full
+	}
+
+	rxBuffer[i] = rx;
+}
+
+char isInputComplete(){
+	int i=0;
+
+	while(rxBuffer[i]!='\0'){
+		i++;
+		if(i==inputSize)	return 'c';	//return that input is complete (true)
+	}
+
+	return '\0';	//if there are bytes remaining, return false
+}
+
+int extractNumber(){
+	int num = 0, exponent = 0, i=RX_BUFFER_SIZE-1;
+
+	//run from end to start in the buffer, until data is found
+	while(rxBuffer[i]=='\0'){
+		i--;
+	}
+
+	for(i=i; i>=0; i--){
+		num += (rxBuffer[i]-'0')*pow(10, exponent);
+		exponent++;
+	}
+
+	return num;
+}
+
+int len(uint8_t *s){
+	int size = 0;
+
+	while(*s != '\0'){
+		size++;
+		s++;
+	}
+
+	return size;
+}
+
+void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
+	HAL_UART_Transmit(huart, &rx, 1, HAL_MAX_DELAY);	//echo
+
+	//flip flag if user typed 'enter'
+	if(rx=='\r'){
+		rxFlag++;
+		return;
+	}
+
+	appendRxBuffer(rx);
+
+	//flip flag when input has been completely received
+	if(isInputComplete())	rxFlag++;
 }
 /* USER CODE END 4 */
 
