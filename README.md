@@ -20,3 +20,5 @@ Eletrônica de Potência e Processamento de Sinais - Prof. Irineu A. Ronconi Jr.
     - [extensionFixAttempt](docs/extensionFixAttempt/README.md)
 - [0.2.3-pwm](docs/0.2.3-pwm/README.md)
 - [0.3.0-setPowerRatio](docs/0.3.0-setPowerRatio/README.md)
+- [0.3.1-speedRatio](docs/0.3.1-speedRatio/README.md)
+- [0.3.2-loopMenu](docs/0.3.2-loopMenu/README.md)

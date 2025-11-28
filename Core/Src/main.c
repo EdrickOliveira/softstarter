@@ -126,14 +126,13 @@ int main(void)
   clearRxBuffer();
   HAL_UART_Receive_DMA(&huart2, &rx, 1);
 
-  menu();
-
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
   {
+	  menu();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
