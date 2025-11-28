@@ -118,8 +118,9 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   triggerCCR = TIM1->CCR2;	//initialize triggerCCR variable
-  setTriggerCCR(35000);
-  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
+  setTriggerCCR(ARR);
+
+  HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);	//start trigger PWM
 
   //clear buffer and start listening to UART
   clearRxBuffer();
@@ -367,8 +368,6 @@ static void MX_GPIO_Init(void)
 void menu(){
 	uint8_t message[] = {"\r\n\nCommands:\n\r\t'P': set power ratio\n\r\t'S': start ramp\n\r\t'R': ramp settings\n\rType the command: \0"};
 
-	setTriggerCCR(ARR);	//turn motor off
-
 	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);	//print menu and prompt
 	clearRxBuffer();
 	inputSize = 1;	//1 byte long input expected
@@ -392,7 +391,7 @@ void menu(){
 
 void setPr(){
 	uint8_t message[] = {"\r\n\nInsert desired Power Ratio (in percentage): \0"};
-	float Pr, triggerAngle;
+	float Pr, Sr, triggerAngle;
 	uint16_t triggerCCR;
 
 	HAL_UART_Transmit(&huart2, message, len(message), HAL_MAX_DELAY);	//print prompt
@@ -403,7 +402,8 @@ void setPr(){
 	while(!rxFlag);
 	rxFlag = 0;
 
-	Pr = (float)extractNumber()/100;
+	Sr = (float)extractNumber()/100;
+	Pr = speedToPower(Sr);
 	triggerAngle = getTrigger(Pr);
 	triggerCCR = (uint16_t)angleToCCR(triggerAngle, ARR);
 	setTriggerCCR(triggerCCR);

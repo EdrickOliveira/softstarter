@@ -12,6 +12,7 @@ extern "C" {
 #endif
 
 // Function Prototypes
+float speedToPower(float Sr);
 float getTrigger(float powerRatio);
 float newtonMethod(float triggerAngle, float powerRatio);
 float function(float x, float Pr);

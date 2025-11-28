@@ -2,14 +2,29 @@
 #include "powerToAngle.h"
 
 #define INITIAL_GUESS (M_PI/2) //guess pi/2 (half-wave) as the triggering angle. This gives the maximum first guess derivative, which helps convergence.
-
-float getTrigger(float powerRatio);
-float newtonMethod(float triggerAngle, float powerRatio);
-float function(float x, float Pr);
-float functionSlope(float x);
-int angleToCCR(float angle, int arr);
+#define a 0.63
+#define b 0.35
 
 ////////////////////////////////////////////////////////////////////////////////////////
+
+/*
+The power ratio is the RMS voltage divided by the maximum RMS voltage, which is 220V.
+However, the motor cannot spin if the power ratio is not more than ~36%, and the spin is maximum when Pr = ~98.7%
+
+The Speed Ratio (Sr) is just the Power Ratio, but normalized so that Sr = 0 when Pr = 35% and Sr = 1 when Pr = 98%
+Sr is linear when related to Pr.
+*/
+float speedToPower(float Sr){
+	float Pr;
+
+	//turn engine on or off if desired Speed Ratio is one or zero, respectively
+	if(Sr>=1)	return 1;
+	if(Sr<=0)	return 0;
+
+	Pr = a*Sr+b;
+
+	return Pr;
+}
 
 /*
 This function uses Newton's method to find the angle of triggering based on the power ratio.
