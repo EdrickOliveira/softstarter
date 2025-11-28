@@ -111,14 +111,14 @@ Applying $\beta=40°$ to the $U_{RMS(\alpha)}$ equation:
 
 ### $P_r=\frac{U_{RMS(\alpha)}}{220}=\frac{\frac{U_P}{\sqrt2}\cdot\sqrt{\frac{\frac{11\pi}{9}-\alpha}{\pi}+\frac{\sin(2\alpha)-\sin(\frac{4\pi}{9})}{2\pi}}}{220}$
 
-### $\sin(2\alpha)-2\alpha=\frac{220^2\cdot36\pi\cdot P_r^2-22\pi\cdot U_P^2+U_P^2\cdot\sin(\frac{4\pi}{9})}{9U_P^2}$
+### $\sin(2\alpha)-2\alpha=2\pi P_r^2-\frac{22\pi}{9}+\sin(\frac{4\pi}{9})$
 
 From this point, the solution is exactly the same as previously, in topic [Finding $\alpha$](#finding), with the only difference being the calculation of $C$:
 
-### $C=-\frac{220^2\cdot36\pi\cdot P_r^2-22\pi\cdot U_P^2+U_P^2\cdot\sin(\frac{4\pi}{9})}{9U_P^2}$
+### $C=\frac{22\pi}{9}-2\pi P_r^2-\sin(\frac{4\pi}{9})$
 
 # Code
 
 The file "functions.c" is a working implementation of this. It takes a user input as Power Ratio and calculates an approximate trigger angle ($\alpha$) value according to the equation:
 
-#### $\sin(2\alpha)-2\alpha=\frac{220^2\cdot36\pi\cdot P_r^2-22\pi\cdot U_P^2+U_P^2\cdot\sin(\frac{4\pi}{9})}{9U_P^2}$
+#### $\sin(2\alpha)-2\alpha=2\pi P_r^2-\frac{22\pi}{9}+\sin(\frac{4\pi}{9})$

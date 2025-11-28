@@ -65,15 +65,11 @@ where Pr is the power ratio.
 The function returns the value of the function at x.
 */
 float function(float x, float Pr){
-    double C, Up;
+    double C;
 
-    Up = sqrt(2)*220;
-
-    C = pow(220, 2)*36*M_PI*pow(Pr, 2);
-    C -= 22*M_PI*pow(Up, 2);
-    C += pow(Up, 2)*sin(4*M_PI/9);
-    C /= 9*pow(Up, 2);
-    C *= -1;
+    C = 22*M_PI/9;
+    C -= 2*M_PI*pow(Pr, 2);
+    C -= sin(4*M_PI/9);
 
     return (float)(sin(2*x) -2*x + C); //return the value of the function at x
 }
