@@ -395,12 +395,25 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
+  /*Configure GPIO pins : alertSlow_Pin alertStop_Pin */
+  GPIO_InitStruct.Pin = alertSlow_Pin|alertStop_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_FALLING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
+
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(LD2_GPIO_Port, &GPIO_InitStruct);
+
+  /* EXTI interrupt init*/
+  HAL_NVIC_SetPriority(EXTI0_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI0_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -625,6 +638,18 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if (htim->Instance == TIM10){
 		time_ms++;	//increment stopwatch by 1 milisecond
+	}
+}
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	uint8_t stopMsg[] = {"\r\n>1A"};
+	uint8_t slowMsg[] = {"\r\n>750mA"};
+
+	if(GPIO_Pin == alertStop_Pin){
+		HAL_UART_Transmit(&huart2, stopMsg, len(stopMsg), HAL_MAX_DELAY);
+	}
+	else if(GPIO_Pin == alertSlow_Pin){
+		HAL_UART_Transmit(&huart2, slowMsg, len(slowMsg), HAL_MAX_DELAY);
 	}
 }
 /* USER CODE END 4 */
