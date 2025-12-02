@@ -49,6 +49,7 @@ typedef struct{
 /* Private variables ---------------------------------------------------------*/
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim10;
+TIM_HandleTypeDef htim11;
 
 UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_rx;
@@ -68,6 +69,8 @@ uint8_t alertsEnabled = 0;
 uint8_t alertFlag = 0;	// 0 = no alert; 1 = slow alert; 2 = stop alert
 uint32_t stopAlertCounter = 0;
 uint32_t slowAlertCounter = 0;
+
+uint8_t phaseUp = 0;	//0 - phase is down/off; 1 - phase is up (220V)
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -77,6 +80,7 @@ static void MX_DMA_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM10_Init(void);
+static void MX_TIM11_Init(void);
 /* USER CODE BEGIN PFP */
 void menu();
 void setPr();
@@ -84,6 +88,7 @@ void startRamp();
 void rampSettings();
 void setRampTime(int *rampTime);
 void overcurrent();
+void phaseDown();
 
 void setTriggerCCR(uint32_t newTrigger);
 
@@ -135,11 +140,14 @@ int main(void)
   MX_TIM1_Init();
   MX_USART2_UART_Init();
   MX_TIM10_Init();
+  MX_TIM11_Init();
   /* USER CODE BEGIN 2 */
   triggerCCR = TIM1->CCR2;	//initialize triggerCCR variable
   setTriggerCCR(TRIGGER_ARR);
 
   HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);	//start trigger PWM
+
+  HAL_TIM_Base_Start_IT(&htim11);	//start phase detection
 
   //clear buffer and start listening to UART
   clearRxBuffer();
@@ -327,6 +335,37 @@ static void MX_TIM10_Init(void)
 }
 
 /**
+  * @brief TIM11 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_TIM11_Init(void)
+{
+
+  /* USER CODE BEGIN TIM11_Init 0 */
+
+  /* USER CODE END TIM11_Init 0 */
+
+  /* USER CODE BEGIN TIM11_Init 1 */
+
+  /* USER CODE END TIM11_Init 1 */
+  htim11.Instance = TIM11;
+  htim11.Init.Prescaler = PSC_7MHz;
+  htim11.Init.CounterMode = TIM_COUNTERMODE_UP;
+  htim11.Init.Period = ARR_8300us;
+  htim11.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+  htim11.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
+  if (HAL_TIM_Base_Init(&htim11) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN TIM11_Init 2 */
+
+  /* USER CODE END TIM11_Init 2 */
+
+}
+
+/**
   * @brief USART2 Initialization Function
   * @param None
   * @retval None
@@ -408,6 +447,12 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
+  /*Configure GPIO pin : phaseDetector_Pin */
+  GPIO_InitStruct.Pin = phaseDetector_Pin;
+  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
+  GPIO_InitStruct.Pull = GPIO_NOPULL;
+  HAL_GPIO_Init(phaseDetector_GPIO_Port, &GPIO_InitStruct);
+
   /*Configure GPIO pin : LD2_Pin */
   GPIO_InitStruct.Pin = LD2_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
@@ -421,6 +466,9 @@ static void MX_GPIO_Init(void)
 
   HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
 
@@ -477,6 +525,12 @@ void startRamp(){
 	//rising ramp
 	HAL_TIM_Base_Start_IT(&htim10);	//start stopwatch
 	do{
+		//execute phase down protocol
+		if(!phaseUp){
+			phaseDown();
+			return;
+		}
+
 		time_s = ((float)(time_ms))/1000;
 
 		//constantly update trigger angle according to the stopwatch, if there is no active alert
@@ -513,7 +567,14 @@ void startRamp(){
 	//falling ramp
 	HAL_TIM_Base_Start_IT(&htim10);	//start stopwatch
 	do{
+		//execute phase down protocol
+		if(!phaseUp){
+			phaseDown();
+			return;
+		}
+
 		time_s = ((float)(time_ms))/1000;
+
 		//constantly update trigger angle according to the stopwatch
 		Sr = ((float)(ramps.fallingTime-time_s))/ramps.fallingTime;	//percentage of time remaining to falling time is the SpeedRatio
 		Pr = speedToPower(Sr);
@@ -562,6 +623,19 @@ void overcurrent(){
 	time_ms = 0;				//reset ramp time counter
 
 	HAL_UART_Transmit(&huart2, overcurrentMsg, len(overcurrentMsg), HAL_MAX_DELAY);	//print overcurrent message
+
+	alertFlag = 0;		//reset stopAlert flag
+	alertsEnabled = 0;	//disable overcurrent alerts
+}
+
+void phaseDown(){
+	uint8_t phaseDownMsg[] = {"\r\nPhase down - process aborted"};
+
+	setTriggerCCR(TRIGGER_ARR);	//turn motor off
+	HAL_TIM_Base_Stop(&htim10);	//turn ramp timer off
+	time_ms = 0;				//reset ramp time counter
+
+	HAL_UART_Transmit(&huart2, phaseDownMsg, len(phaseDownMsg), HAL_MAX_DELAY);	//print overcurrent message
 
 	alertFlag = 0;		//reset stopAlert flag
 	alertsEnabled = 0;	//disable overcurrent alerts
@@ -640,7 +714,8 @@ void receiveInput(int size){
 
 	//wait for an input
 	while(!rxFlag){
-		if(alertFlag == 2)	return;
+		//exit if there's an overcurrent alert or the phase goes down
+		if(alertsEnabled && (alertFlag == 2 || !phaseUp))	return;
 	}
 	rxFlag = 0;
 }
@@ -679,12 +754,22 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 }
 
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
-	if (htim->Instance == TIM10){
+	if(htim->Instance == TIM10){
 		time_ms++;	//increment stopwatch by 1 milisecond
+	}
+	if(htim->Instance == TIM11){
+		//decrement phase checking variable. It will be set back to 10 if phase is up. Otherwise it'll eventually become zero, meaning the phase is down
+		phaseUp--;
+		if(phaseUp == 0xFF)	phaseUp = 0;	//avoid underflow
 	}
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
+	//reinforce that phase is up
+	if(GPIO_Pin == phaseDetector_Pin){
+		phaseUp = 10;
+	}
+
 	if(stopAlertCounter || slowAlertCounter || !alertsEnabled)	return;	//ignore alerts if there is already one being processed, or they are disabled
 
 	//alert detection and debouncing

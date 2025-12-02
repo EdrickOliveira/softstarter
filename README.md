@@ -1,4 +1,4 @@
-# Soft Starter - V0.5.4
+# Soft Starter - V0.6.0
 By Davi da Silva Schuch and Edrick Thomé de Oliveira \
 Eletrônica de Potência e Processamento de Sinais - Prof. Irineu A. Ronconi Jr.
 
@@ -29,3 +29,4 @@ Eletrônica de Potência e Processamento de Sinais - Prof. Irineu A. Ronconi Jr.
 - [0.5.2-currentTransformer](docs/0.5.2-currentTransformer/README.md)
 - [0.5.3-alerts](docs/0.5.3-alerts/README.md)
 - [0.5.4-overcurrentProtection](docs/0.5.4-overcurrentProtection/README.md)
+- [0.6.0-phaseDetection](docs/0.6.0-phaseDetection/README.md)
