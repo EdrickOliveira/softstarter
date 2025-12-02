@@ -63,6 +63,11 @@ uint8_t rx;				//byte received from UART
 uint8_t rxBuffer[RX_BUFFER_SIZE];	//stores data received from UART
 uint8_t rxFlag = 0;		//flips to 1 when DMA request is complete (a message has been received)
 uint8_t inputSize;	//the size of the next expected input
+
+uint8_t alertsEnabled = 0;
+uint8_t alertFlag = 0;	// 0 = no alert; 1 = slow alert; 2 = stop alert
+uint32_t stopAlertCounter = 0;
+uint32_t slowAlertCounter = 0;
 /* USER CODE END PV */
 
 /* Private function prototypes -----------------------------------------------*/
@@ -78,6 +83,7 @@ void setPr();
 void startRamp();
 void rampSettings();
 void setRampTime(int *rampTime);
+void overcurrent();
 
 void setTriggerCCR(uint32_t newTrigger);
 
@@ -145,7 +151,8 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-	  menu();
+	  if(!alertFlag)			menu();			//go to menu if everything's alright
+	  else if(alertFlag == 2)	overcurrent();	//overcurrent protocol if stopAlert triggers
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -465,16 +472,31 @@ void startRamp(){
 
 	HAL_UART_Transmit(&huart2, risingMsg, len(risingMsg), HAL_MAX_DELAY);	//print that rising has begun
 
+	alertsEnabled = 1;	//enable overcurrent alerts
+
 	//rising ramp
 	HAL_TIM_Base_Start_IT(&htim10);	//start stopwatch
 	do{
-		//constantly update trigger angle according to the stopwatch
 		time_s = ((float)(time_ms))/1000;
-		Sr = ((float)time_s)/ramps.risingTime;	//percentage of time elapsed (100% is the rising time) is the SpeedRatio
-		Pr = speedToPower(Sr);
-		triggerAngle = getTrigger(Pr);
-		triggerCCR = (uint16_t)angleToCCR(triggerAngle, TRIGGER_ARR);
-		setTriggerCCR(triggerCCR);
+
+		//constantly update trigger angle according to the stopwatch, if there is no active alert
+		if(!alertFlag){
+			Sr = ((float)time_s)/ramps.risingTime;	//percentage of time elapsed (100% is the rising time) is the SpeedRatio
+			Pr = speedToPower(Sr);
+			triggerAngle = getTrigger(Pr);
+			triggerCCR = (uint16_t)angleToCCR(triggerAngle, TRIGGER_ARR);
+			setTriggerCCR(triggerCCR);
+		}
+		//slow down (go back in time) if slowAlert triggers
+		else if(alertFlag == 1){
+			if(time_ms-200*ramps.risingTime >= 0)	time_ms -= 200*ramps.risingTime;
+			else									time_ms = 0;
+			alertFlag = 0;
+		}
+		//execute overcurrent protocol if stopAlert triggers
+		else if(alertFlag==2){
+			return;
+		}
 	}while(time_s<ramps.risingTime);	//stop when rising time is complete
 	HAL_TIM_Base_Stop_IT(&htim10);
 	time_ms = 0;
@@ -482,13 +504,17 @@ void startRamp(){
 	HAL_UART_Transmit(&huart2, fullPowerMsg, len(fullPowerMsg), HAL_MAX_DELAY);	//print full power indicator
 	receiveInput(1);	//wait for any user input
 
+	if(alertFlag == 2){
+		return;
+	}
+
 	HAL_UART_Transmit(&huart2, fallingMsg, len(fallingMsg), HAL_MAX_DELAY);	//print that falling has begun
 
 	//falling ramp
 	HAL_TIM_Base_Start_IT(&htim10);	//start stopwatch
 	do{
-		//constantly update trigger angle according to the stopwatch
 		time_s = ((float)(time_ms))/1000;
+		//constantly update trigger angle according to the stopwatch
 		Sr = ((float)(ramps.fallingTime-time_s))/ramps.fallingTime;	//percentage of time remaining to falling time is the SpeedRatio
 		Pr = speedToPower(Sr);
 		triggerAngle = getTrigger(Pr);
@@ -499,6 +525,8 @@ void startRamp(){
 	time_ms = 0;
 
 	HAL_UART_Transmit(&huart2, offMsg, len(offMsg), HAL_MAX_DELAY);	//print that motor is off
+
+	alertsEnabled = 0;	//disable overcurrent alerts
 }
 
 void rampSettings(){
@@ -524,6 +552,19 @@ void setRampTime(int *rampTime){
 	receiveInput(3);	//3 bytes long input expected
 
 	*rampTime = extractNumber();
+}
+
+void overcurrent(){
+	uint8_t overcurrentMsg[] = {"\r\nOvercurrent - process aborted"};
+
+	setTriggerCCR(TRIGGER_ARR);	//turn motor off
+	HAL_TIM_Base_Stop(&htim10);	//turn ramp timer off
+	time_ms = 0;				//reset ramp time counter
+
+	HAL_UART_Transmit(&huart2, overcurrentMsg, len(overcurrentMsg), HAL_MAX_DELAY);	//print overcurrent message
+
+	alertFlag = 0;		//reset stopAlert flag
+	alertsEnabled = 0;	//disable overcurrent alerts
 }
 
 void setTriggerCCR(uint32_t newTrigger){
@@ -598,7 +639,9 @@ void receiveInput(int size){
 	inputSize = size;	//'size' byte long input expected
 
 	//wait for an input
-	while(!rxFlag);
+	while(!rxFlag){
+		if(alertFlag == 2)	return;
+	}
 	rxFlag = 0;
 }
 
@@ -642,14 +685,32 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 }
 
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin){
-	uint8_t stopMsg[] = {"\r\n>1A"};
-	uint8_t slowMsg[] = {"\r\n>750mA"};
+	if(stopAlertCounter || slowAlertCounter || !alertsEnabled)	return;	//ignore alerts if there is already one being processed, or they are disabled
+
+	//alert detection and debouncing
 
 	if(GPIO_Pin == alertStop_Pin){
-		HAL_UART_Transmit(&huart2, stopMsg, len(stopMsg), HAL_MAX_DELAY);
+		while(!HAL_GPIO_ReadPin(GPIOA, alertStop_Pin)){	//if the alert stays valid (active in LOW) for an amount of time
+			stopAlertCounter++;
+			if(stopAlertCounter>100000){
+				stopAlertCounter = 0;
+				alertFlag = 2;							//then trigger the alert
+				return;
+			}
+		}
+		stopAlertCounter = 0;							//if there is a rising edge at any moment, ignore and reset alert
 	}
-	else if(GPIO_Pin == alertSlow_Pin){
-		HAL_UART_Transmit(&huart2, slowMsg, len(slowMsg), HAL_MAX_DELAY);
+
+	if(GPIO_Pin == alertSlow_Pin){
+		while(!HAL_GPIO_ReadPin(GPIOA, alertSlow_Pin)){
+			slowAlertCounter++;
+			if(slowAlertCounter>100000){
+				slowAlertCounter = 0;
+				alertFlag = 1;
+				return;
+			}
+		}
+		slowAlertCounter = 0;
 	}
 }
 /* USER CODE END 4 */
