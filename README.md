@@ -25,3 +25,5 @@ Eletrônica de Potência e Processamento de Sinais - Prof. Irineu A. Ronconi Jr.
 - [0.4.0-rampSettings](docs/0.4.0-rampSettings/README.md)
 - [0.4.1-softstarting](docs/0.4.1-softstarting/README.md)
 - [0.5.0-currentMeasurement](docs/0.5.0-currentMeasurement/README.md)
+- [0.5.1-ina226](docs/0.5.1-ina226/README.md)
+- [0.5.2-currentTransformer](docs/0.5.2-currentTransformer/README.md)

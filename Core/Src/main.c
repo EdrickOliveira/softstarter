@@ -23,7 +23,6 @@
 /* USER CODE BEGIN Includes */
 #include "math.h"
 #include "powerToAngle.h"
-#include "ina226_hal.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -48,20 +47,13 @@ typedef struct{
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-I2C_HandleTypeDef hi2c1;
-
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim10;
-TIM_HandleTypeDef htim13;
 
 UART_HandleTypeDef huart2;
 DMA_HandleTypeDef hdma_usart2_rx;
 
 /* USER CODE BEGIN PV */
-INA226_Handle ina;
-float Id;
-uint8_t idFlag = 0;
-
 ramps_t ramps;
 uint32_t time_ms = 0;		//stopwatch
 
@@ -80,16 +72,12 @@ static void MX_DMA_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_USART2_UART_Init(void);
 static void MX_TIM10_Init(void);
-static void MX_I2C1_Init(void);
-static void MX_TIM13_Init(void);
 /* USER CODE BEGIN PFP */
 void menu();
 void setPr();
 void startRamp();
 void rampSettings();
 void setRampTime(int *rampTime);
-
-void INA226_setAndStart(INA226_Handle *ina);
 
 void setTriggerCCR(uint32_t newTrigger);
 
@@ -141,8 +129,6 @@ int main(void)
   MX_TIM1_Init();
   MX_USART2_UART_Init();
   MX_TIM10_Init();
-  MX_I2C1_Init();
-  MX_TIM13_Init();
   /* USER CODE BEGIN 2 */
   triggerCCR = TIM1->CCR2;	//initialize triggerCCR variable
   setTriggerCCR(TRIGGER_ARR);
@@ -152,10 +138,6 @@ int main(void)
   //clear buffer and start listening to UART
   clearRxBuffer();
   HAL_UART_Receive_DMA(&huart2, &rx, 1);
-
-  //init INA226 and measure current each 600us
-  INA226_setAndStart(&ina);
-  HAL_TIM_Base_Start_IT(&htim13);	//interrupt triggered each 600us
 
   /* USER CODE END 2 */
 
@@ -216,40 +198,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief I2C1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_I2C1_Init(void)
-{
-
-  /* USER CODE BEGIN I2C1_Init 0 */
-
-  /* USER CODE END I2C1_Init 0 */
-
-  /* USER CODE BEGIN I2C1_Init 1 */
-
-  /* USER CODE END I2C1_Init 1 */
-  hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 400000;
-  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c1.Init.OwnAddress1 = 0;
-  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c1.Init.OwnAddress2 = 0;
-  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN I2C1_Init 2 */
-
-  /* USER CODE END I2C1_Init 2 */
-
 }
 
 /**
@@ -368,37 +316,6 @@ static void MX_TIM10_Init(void)
   /* USER CODE BEGIN TIM10_Init 2 */
 
   /* USER CODE END TIM10_Init 2 */
-
-}
-
-/**
-  * @brief TIM13 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_TIM13_Init(void)
-{
-
-  /* USER CODE BEGIN TIM13_Init 0 */
-
-  /* USER CODE END TIM13_Init 0 */
-
-  /* USER CODE BEGIN TIM13_Init 1 */
-
-  /* USER CODE END TIM13_Init 1 */
-  htim13.Instance = TIM13;
-  htim13.Init.Prescaler = (504-1);
-  htim13.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim13.Init.Period = (100-1);
-  htim13.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
-  htim13.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
-  if (HAL_TIM_Base_Init(&htim13) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN TIM13_Init 2 */
-
-  /* USER CODE END TIM13_Init 2 */
 
 }
 
@@ -538,12 +455,6 @@ void startRamp(){
 	//rising ramp
 	HAL_TIM_Base_Start_IT(&htim10);	//start stopwatch
 	do{
-		//measure Id each 600us
-		if(idFlag){
-			Id = INA226_GetCurrent(&ina);
-			idFlag = 0;
-		}
-
 		//constantly update trigger angle according to the stopwatch
 		time_s = ((float)(time_ms))/1000;
 		Sr = ((float)time_s)/ramps.risingTime;	//percentage of time elapsed (100% is the rising time) is the SpeedRatio
@@ -563,12 +474,6 @@ void startRamp(){
 	//falling ramp
 	HAL_TIM_Base_Start_IT(&htim10);	//start stopwatch
 	do{
-		//measure Id each 600us
-		if(idFlag){
-			Id = INA226_GetCurrent(&ina);
-			idFlag = 0;
-		}
-
 		//constantly update trigger angle according to the stopwatch
 		time_s = ((float)(time_ms))/1000;
 		Sr = ((float)(ramps.fallingTime-time_s))/ramps.fallingTime;	//percentage of time remaining to falling time is the SpeedRatio
@@ -606,33 +511,6 @@ void setRampTime(int *rampTime){
 	receiveInput(3);	//3 bytes long input expected
 
 	*rampTime = extractNumber();
-}
-
-void INA226_setAndStart(INA226_Handle *ina){
-	uint8_t initFailedMsg[] = {"\r\nCould not connect to INA226. Fix wiring and reset."};
-	uint8_t configErrorMsg[] = {"\r\nINA226 config error: %d (err)*"};
-
-	// Initialize INA226
-	INA226_Init(ina, &hi2c1, 0x40);   // 7-bit address (A0=A1=GND)
-	if (!INA226_Begin(ina)) {
-	  HAL_UART_Transmit(&huart2, initFailedMsg, len(initFailedMsg), HAL_MAX_DELAY);
-	  while (1);
-	}
-
-	// Configure: shunt resistance ~0.05 Ω, Current LSB = 20 uA
-	int err = INA226_Configure(ina, 0.05f, 0.02f, 0.0f, 10000);
-	if (err != INA226_ERR_NONE) {
-	  configErrorMsg[30] = (uint8_t)(err+'0');	//send error ID (number) along as an ASCII character
-	  HAL_UART_Transmit(&huart2, configErrorMsg, len(configErrorMsg), HAL_MAX_DELAY);
-	  while (1);
-	}
-
-	//page 24 of datasheet - shunt voltage, continuous mode
-	INA226_SetMode(ina, 0b101);
-
-	// Filtering (update ~588us - ~14 samples/cycle) shuntConvTime*samples
-	INA226_SetAverage(ina, INA226_1_SAMPLE);
-	INA226_SetShuntConvTime(ina, INA226_588_us);
 }
 
 void setTriggerCCR(uint32_t newTrigger){
@@ -747,9 +625,6 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart){
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	if (htim->Instance == TIM10){
 		time_ms++;	//increment stopwatch by 1 milisecond
-	}
-	else if (htim->Instance == TIM13){
-		idFlag = 1;	//measure current each 600us
 	}
 }
 /* USER CODE END 4 */
