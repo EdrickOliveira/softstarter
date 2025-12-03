@@ -2,6 +2,8 @@
 
 Among the project criteria was one that stated that the system had to be shut if there was a phase loss (energy down).
 
+![alt text](diagram.png)
+
 The zeroDetector was used as a phaseDetector, as it is a 120Hz PWM signal when the phase is up, and always low when there is no phase.
 
 The zeroDetector signal pin, already connected to PA8 (TIM1's CH1 - trigger source), was connected to PA4 as well. At each zeroDetector's rising edge, an interruption is generated, assigning the variable $phaseUp$ to $10$.
